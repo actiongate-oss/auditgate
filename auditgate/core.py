@@ -1,3 +1,9 @@
+# Copyright 2026 actiongate-oss
+# Licensed under the Business Source License 1.1 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License in the LICENSE file at the
+# root of this repository.
+
 """Core types for AuditGate."""
 
 from __future__ import annotations
@@ -101,6 +107,7 @@ class AuditEntry:
     def to_dict(self) -> dict[str, Any]:
         """Canonical JSON-portable format for cross-language compatibility."""
         return {
+            "schema_version": "0.1.1",
             "trail": str(self.trail),
             "ts": self.ts,
             "wall_ts": self.wall_ts,

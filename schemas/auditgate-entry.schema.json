@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "license": "Business Source License 1.1",
+  "$id": "https://actiongate.dev/schemas/auditgate-entry-0.1.1.json",
+  "title": "AuditGate Entry",
+  "description": "Serialized output of auditgate.AuditEntry.to_dict(). Tamper-evident audit log entry. Field order in this schema is normative for hash computation.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "trail",
+    "ts",
+    "wall_ts",
+    "verdict",
+    "severity",
+    "gate_type",
+    "gate_identity",
+    "recorded_by",
+    "reason",
+    "detail",
+    "entry_hash",
+    "prev_hash",
+    "sequence"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "0.1.1",
+      "description": "Schema version. Consumers must check this before parsing."
+    },
+    "trail": {
+      "type": "string",
+      "pattern": "^[^:]+:[^@]+@.+$",
+      "description": "Trail identity as namespace:source@principal."
+    },
+    "ts": {
+      "type": "number",
+      "description": "Monotonic timestamp from engine clock. Used for ordering, not wall time."
+    },
+    "wall_ts": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Wall-clock timestamp as ISO 8601 UTC. Human-readable audit time."
+    },
+    "verdict": {
+      "type": "string",
+      "enum": [
+        "ALLOW",
+        "BLOCK",
+        "ERROR",
+        "OVERRIDE"
+      ],
+      "description": "Outcome of the gate decision being audited."
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "DEBUG",
+        "INFO",
+        "WARN",
+        "ERROR",
+        "CRITICAL"
+      ],
+      "description": "Log severity level."
+    },
+    "gate_type": {
+      "type": "string",
+      "description": "Which gate produced the decision (e.g. 'actiongate', 'budgetgate', 'rulegate')."
+    },
+    "gate_identity": {
+      "type": "string",
+      "description": "Identity string of the gate that produced the decision."
+    },
+    "recorded_by": {
+      "type": "string",
+      "description": "Identifier of the AuditGate engine instance that recorded this entry."
+    },
+    "reason": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Human-readable reason for the verdict."
+    },
+    "detail": {
+      "type": "object",
+      "description": "Arbitrary metadata attached to this audit entry."
+    },
+    "entry_hash": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 hash of canonical entry content. Null when integrity mode is NONE."
+    },
+    "prev_hash": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Hash of previous entry in chain. Null for first entry or non-CHAIN mode."
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Monotonically increasing sequence number within this trail."
+    }
+  }
+}

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "auditgate"
-version = "0.1.0"
+version = "0.1.1"
 description = "Compliance-grade audit logging for agent systems."
 readme = "README.md"
 license = "BUSL-1.1"
