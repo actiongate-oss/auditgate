@@ -7,7 +7,7 @@ from auditgate import (MISSING, AuditEntry, AuditError, AuditPolicy, Decision, E
     StoreErrorMode, Trail, Verdict, compute_hash, verify_chain, wall_clock)
 
 passed = 0; failed = 0; errors: list[str] = []
-def test(name):
+def _run_case(name):
     def decorator(fn):
         global passed, failed
         try: fn(); passed += 1; print(f"  ✓ {name}")
@@ -29,14 +29,14 @@ def fake_wall(): return "2026-02-27T12:00:00+00:00"
 
 print("\n── Core Types ──")
 
-@test("Trail equality and key")
+@_run_case("Trail equality and key")
 def _():
     t1 = Trail("b", "ag", "u:1"); t2 = Trail("b", "ag", "u:1"); t3 = Trail("b", "ag", "u:2")
     assert t1 == t2 and t1 != t3
     assert str(t1) == "b:ag@u:1" and t1.key == "aud:b:ag:u:1"
     assert Trail("api", "x").principal == "global"
 
-@test("AuditPolicy defaults and validation")
+@_run_case("AuditPolicy defaults and validation")
 def _():
     p = AuditPolicy()
     assert p.mode == Mode.HARD and p.integrity == IntegrityMode.HASH
@@ -44,13 +44,13 @@ def _():
         try: AuditPolicy(retention_seconds=bad); assert False
         except ValueError: pass
 
-@test("Decision truthy = recorded")
+@_run_case("Decision truthy = recorded")
 def _():
     t, p = Trail("t", "t"), AuditPolicy()
     assert bool(Decision(status=Status.RECORDED, trail=t, policy=p)) is True
     assert bool(Decision(status=Status.DROPPED, trail=t, policy=p, reason="x")) is False
 
-@test("Result MISSING sentinel")
+@_run_case("Result MISSING sentinel")
 def _():
     t, p = Trail("t", "t"), AuditPolicy()
     d = Decision(status=Status.DROPPED, trail=t, policy=p, reason="x")
@@ -61,7 +61,7 @@ def _():
     r2 = Result(decision=Decision(status=Status.RECORDED, trail=t, policy=p), _value=None)
     assert r2.ok and r2.unwrap() is None and r2.unwrap_or("fb") is None
 
-@test("compute_hash determinism and sensitivity")
+@_run_case("compute_hash determinism and sensitivity")
 def _():
     d = {"trail":"a","ts":1.0,"verdict":"ALLOW","severity":"INFO","gate_type":"x",
          "gate_identity":"x","reason":None,"detail":{},"sequence":0}
@@ -69,20 +69,20 @@ def _():
     assert compute_hash(d) != compute_hash({**d, "verdict":"BLOCK"})
     assert compute_hash(d) != compute_hash(d, prev_hash="abc")
 
-@test("wall_clock returns ISO 8601")
+@_run_case("wall_clock returns ISO 8601")
 def _():
     ts = wall_clock()
     assert "T" in ts
 
 print("\n── Store ──")
 
-@test("MemoryStore append, last_entry, count")
+@_run_case("MemoryStore append, last_entry, count")
 def _():
     s = MemoryStore(); t = Trail("t", "t"); e = _entry(t)
     s.append(e); assert s.last_entry(t) == e and s.count(t) == 1
     assert s.last_entry(Trail("empty", "empty")) is None
 
-@test("MemoryStore query with filters")
+@_run_case("MemoryStore query with filters")
 def _():
     s = MemoryStore(); t = Trail("t", "t")
     s.append(_entry(t, ts=1.0, verdict=Verdict.ALLOW, severity=Severity.INFO, sequence=0))
@@ -94,7 +94,7 @@ def _():
     assert len(s.query(QueryFilter(trail=t, after_ts=1.5, before_ts=2.5))) == 1
     assert len(s.query(QueryFilter(trail=t, limit=2))) == 2
 
-@test("MemoryStore pagination with offset")
+@_run_case("MemoryStore pagination with offset")
 def _():
     s = MemoryStore(); t = Trail("t", "t")
     for i in range(10): s.append(_entry(t, ts=float(i), sequence=i))
@@ -105,7 +105,7 @@ def _():
     assert len(p2) == 3 and p2[0].sequence == 3
     assert len(p4) == 1 and p4[0].sequence == 9
 
-@test("MemoryStore prune, clear, clear_all")
+@_run_case("MemoryStore prune, clear, clear_all")
 def _():
     s = MemoryStore(); t = Trail("t", "t")
     for i in range(5): s.append(_entry(t, ts=float(i), sequence=i))
@@ -116,7 +116,7 @@ def _():
 
 print("\n── Engine ──")
 
-@test("Engine record — wall_ts, recorded_by, sequence")
+@_run_case("Engine record — wall_ts, recorded_by, sequence")
 def _():
     global _clk; _clk = 100.0
     eng = Engine(clock=fake_clock, wall_clock_fn=fake_wall, recorded_by="svc:gw")
@@ -126,7 +126,7 @@ def _():
     assert d.recorded and d.entry.wall_ts == "2026-02-27T12:00:00+00:00"
     assert d.entry.recorded_by == "svc:gw" and d.entry.sequence == 0
 
-@test("Engine sequence resumes from store on restart")
+@_run_case("Engine sequence resumes from store on restart")
 def _():
     global _clk; _clk = 1.0; store = MemoryStore()
     e1 = Engine(store=store, clock=fake_clock, wall_clock_fn=fake_wall)
@@ -141,7 +141,7 @@ def _():
                   gate_type="x", gate_identity="x")
     assert d.entry.sequence == 3
 
-@test("Engine severity filter")
+@_run_case("Engine severity filter")
 def _():
     global _clk; _clk = 1.0
     eng = Engine(clock=fake_clock, wall_clock_fn=fake_wall)
@@ -150,7 +150,7 @@ def _():
                    gate_type="x", gate_identity="x")
     assert d.dropped and "Below min_severity" in d.reason
 
-@test("Engine IntegrityMode.NONE — no hash")
+@_run_case("Engine IntegrityMode.NONE — no hash")
 def _():
     global _clk; _clk = 1.0
     eng = Engine(clock=fake_clock, wall_clock_fn=fake_wall)
@@ -159,7 +159,7 @@ def _():
                    gate_type="x", gate_identity="x")
     assert d.entry.entry_hash is None and d.entry.prev_hash is None
 
-@test("Engine IntegrityMode.HASH — hash, no chain")
+@_run_case("Engine IntegrityMode.HASH — hash, no chain")
 def _():
     global _clk; _clk = 1.0
     eng = Engine(clock=fake_clock, wall_clock_fn=fake_wall)
@@ -168,7 +168,7 @@ def _():
                    gate_type="x", gate_identity="x")
     assert d.entry.entry_hash and len(d.entry.entry_hash) == 64 and d.entry.prev_hash is None
 
-@test("Engine IntegrityMode.CHAIN — builds chain")
+@_run_case("Engine IntegrityMode.CHAIN — builds chain")
 def _():
     global _clk
     eng = Engine(clock=fake_clock, wall_clock_fn=fake_wall)
@@ -180,7 +180,7 @@ def _():
     assert d1.entry.prev_hash is None
     assert d2.entry.prev_hash == d1.entry.entry_hash
 
-@test("Engine enforce — HARD raises, SOFT does not")
+@_run_case("Engine enforce — HARD raises, SOFT does not")
 def _():
     global _clk; _clk = 1.0
     eng = Engine(clock=fake_clock, wall_clock_fn=fake_wall)
@@ -190,7 +190,7 @@ def _():
     try: eng.enforce(d); assert False
     except AuditError: pass
 
-@test("Engine listener fires and errors counted")
+@_run_case("Engine listener fires and errors counted")
 def _():
     global _clk; _clk = 1.0
     eng = Engine(clock=fake_clock, wall_clock_fn=fake_wall)
@@ -199,7 +199,7 @@ def _():
                gate_type="x", gate_identity="x")
     assert len(decs) == 1 and eng.listener_errors == 1
 
-@test("Engine store error — FAIL_CLOSED+HARD raises, FAIL_OPEN drops silently")
+@_run_case("Engine store error — FAIL_CLOSED+HARD raises, FAIL_OPEN drops silently")
 def _():
     global _clk; _clk = 1.0
     class Broken(MemoryStore):
@@ -218,7 +218,7 @@ def _():
 
 print("\n── Verify Chain ──")
 
-@test("verify_chain — valid chain passes")
+@_run_case("verify_chain — valid chain passes")
 def _():
     global _clk
     eng = Engine(clock=fake_clock, wall_clock_fn=fake_wall)
@@ -231,7 +231,7 @@ def _():
     valid, broken = verify_chain(entries)
     assert valid is True and broken is None
 
-@test("verify_chain — tampered entry detected")
+@_run_case("verify_chain — tampered entry detected")
 def _():
     global _clk
     eng = Engine(clock=fake_clock, wall_clock_fn=fake_wall)
@@ -251,7 +251,7 @@ def _():
 
 print("\n── Decorators ──")
 
-@test("guard and guard_result decorators")
+@_run_case("guard and guard_result decorators")
 def _():
     global _clk; _clk = 1.0
     eng = Engine(clock=fake_clock, wall_clock_fn=fake_wall)
@@ -262,7 +262,7 @@ def _():
     def ret_none(): return None
     r = ret_none(); assert r.ok and r.unwrap() is None
 
-@test("to_dict includes all compliance fields")
+@_run_case("to_dict includes all compliance fields")
 def _():
     e = AuditEntry(trail=Trail("t","t"), ts=1.0, wall_ts="2026-02-27T12:00:00+00:00",
                    verdict=Verdict.ALLOW, severity=Severity.INFO, gate_type="ag",
@@ -272,10 +272,11 @@ def _():
     assert d["wall_ts"] == "2026-02-27T12:00:00+00:00"
     assert d["recorded_by"] == "svc:gw"
 
-print(f"\n{'═'*50}")
-print(f"Results: {passed} passed, {failed} failed")
-if errors:
-    print("\nFailures:")
-    for e in errors: print(e)
-print(f"{'═'*50}")
-sys.exit(1 if failed else 0)
+if __name__ == "__main__":
+    print(f"\n{'═'*50}")
+    print(f"Results: {passed} passed, {failed} failed")
+    if errors:
+        print("\nFailures:")
+        for e in errors: print(e)
+    print(f"{'═'*50}")
+    sys.exit(1 if failed else 0)

@@ -13,6 +13,7 @@ See CANONICAL_JSON.md for the full specification.
 
 from auditgate import compute_hash
 
+
 def test_vector_1_minimal():
     """Minimal entry, no chaining."""
     v = {
@@ -31,7 +32,8 @@ def test_vector_2_chained():
         "gate_type": "actiongate", "gate_identity": "test:action@global",
         "reason": None, "detail": {}, "sequence": 0,
     }
-    assert compute_hash(v, prev_hash="0" * 64) == "0f510008d027b9f0bc8df59fda55265368c8b298694540f7e7de36039df13e4b"
+    expected = "0f510008d027b9f0bc8df59fda55265368c8b298694540f7e7de36039df13e4b"
+    assert compute_hash(v, prev_hash="0" * 64) == expected
 
 def test_vector_3_with_detail():
     """Entry with nested detail object."""
@@ -56,7 +58,8 @@ def test_vector_4_two_entry_chain():
         "detail": {"violated": ["no_pii"], "context": "ssn detected"},
         "sequence": 7,
     }
-    assert compute_hash(v, prev_hash=v1_hash) == "76303466bec8897f90745033ed8aefa8135468169db0d7b9f3c036e6b76a4d8a"
+    expected = "76303466bec8897f90745033ed8aefa8135468169db0d7b9f3c036e6b76a4d8a"
+    assert compute_hash(v, prev_hash=v1_hash) == expected
 
 if __name__ == "__main__":
     for name, fn in list(globals().items()):

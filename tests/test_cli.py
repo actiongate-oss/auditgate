@@ -23,7 +23,7 @@ failed = 0
 errors: list[str] = []
 
 
-def test(name):
+def _run_case(name):
     def decorator(fn):
         global passed, failed
         try:
@@ -74,27 +74,27 @@ def _make_chain(n=3):
 print("── CLI verify_log ──")
 
 
-@test("valid chain passes")
+@_run_case("valid chain passes")
 def _():
     entries = _make_chain(5)
     valid, msgs = _verify_log(entries)
     assert valid, f"expected valid: {msgs}"
 
 
-@test("empty log passes")
+@_run_case("empty log passes")
 def _():
     valid, msgs = _verify_log([])
     assert valid
 
 
-@test("single entry passes")
+@_run_case("single entry passes")
 def _():
     entries = _make_chain(1)
     valid, msgs = _verify_log(entries)
     assert valid
 
 
-@test("tampered entry detected")
+@_run_case("tampered entry detected")
 def _():
     entries = _make_chain(3)
     entries[1]["verdict"] = "BLOCK"  # tamper without recomputing hash
@@ -102,7 +102,7 @@ def _():
     assert not valid, "should detect tampered entry"
 
 
-@test("broken chain linkage detected")
+@_run_case("broken chain linkage detected")
 def _():
     entries = _make_chain(3)
     # Replace entry[2]'s prev_hash with garbage
@@ -113,7 +113,7 @@ def _():
     assert not valid, "should detect chain break"
 
 
-@test("sequence gap produces warning")
+@_run_case("sequence gap produces warning")
 def _():
     entries = _make_chain(3)
     entries[2]["sequence"] = 5  # gap: 0, 1, 5
@@ -125,7 +125,7 @@ def _():
     assert has_warn, f"expected sequence gap warning: {msgs}"
 
 
-@test("entries without hashes are skipped")
+@_run_case("entries without hashes are skipped")
 def _():
     entry = {
         "schema_version": "0.1.1", "trail": "test:x@global",
@@ -139,7 +139,7 @@ def _():
     assert valid
 
 
-@test("multiple trails verified independently")
+@_run_case("multiple trails verified independently")
 def _():
     chain_a = _make_chain(2)
     chain_b = []
@@ -159,7 +159,7 @@ def _():
     assert valid
 
 
-@test("full chain recomputation attack produces valid result (documented limitation)")
+@_run_case("full chain recomputation attack produces valid result (documented limitation)")
 def _():
     """An attacker who recomputes all hashes produces a valid-looking chain.
     This is the documented trust boundary limitation."""
@@ -178,7 +178,7 @@ def _():
 print("\n── CLI main() ──")
 
 
-@test("main verify with valid file returns 0")
+@_run_case("main verify with valid file returns 0")
 def _():
     entries = _make_chain(3)
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
@@ -188,7 +188,7 @@ def _():
     assert ret == 0
 
 
-@test("main verify with tampered file returns 1")
+@_run_case("main verify with tampered file returns 1")
 def _():
     entries = _make_chain(3)
     entries[1]["verdict"] = "BLOCK"
@@ -199,7 +199,7 @@ def _():
     assert ret == 1
 
 
-@test("main verify --json outputs valid JSON")
+@_run_case("main verify --json outputs valid JSON")
 def _():
     entries = _make_chain(2)
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
@@ -218,13 +218,13 @@ def _():
     assert result["entries"] == 2
 
 
-@test("main verify missing file returns 1")
+@_run_case("main verify missing file returns 1")
 def _():
     ret = main(["verify", "/nonexistent/file.json"])
     assert ret == 1
 
 
-@test("main verify invalid JSON returns 1")
+@_run_case("main verify invalid JSON returns 1")
 def _():
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
         f.write("not json{{{")
@@ -233,11 +233,12 @@ def _():
     assert ret == 1
 
 
-print(f"\n{'═' * 50}")
-print(f"Results: {passed} passed, {failed} failed")
-if errors:
-    print("\nFailures:")
-    for e in errors:
-        print(e)
-print(f"{'═' * 50}")
-sys.exit(1 if failed else 0)
+if __name__ == "__main__":
+    print(f"\n{'═' * 50}")
+    print(f"Results: {passed} passed, {failed} failed")
+    if errors:
+        print("\nFailures:")
+        for e in errors:
+            print(e)
+    print(f"{'═' * 50}")
+    sys.exit(1 if failed else 0)

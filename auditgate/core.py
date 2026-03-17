@@ -11,7 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum, auto
 from typing import Any
 
@@ -170,12 +170,12 @@ class Result[T]:
             raise RuntimeError(
                 f"unwrap() called on dropped audit: {self.decision.reason}"
             )
-        return self._value  # type: ignore[return-value]
+        return self._value
 
     def unwrap_or(self, default: T) -> T:
         if isinstance(self._value, _Missing):
             return default
-        return self._value  # type: ignore[return-value]
+        return self._value
 
 
 # ── Integrity ──
@@ -224,8 +224,7 @@ def verify_chain(entries: list[AuditEntry]) -> tuple[bool, int | None]:
         if entry.entry_hash != expected:
             return False, entry.sequence
 
-        if entry.prev_hash is not None and i > 0:
-            if entries[i - 1].entry_hash != entry.prev_hash:
+        if entry.prev_hash is not None and i > 0 and entries[i - 1].entry_hash != entry.prev_hash:
                 return False, entry.sequence
 
     return True, None
@@ -233,4 +232,4 @@ def verify_chain(entries: list[AuditEntry]) -> tuple[bool, int | None]:
 
 def wall_clock() -> str:
     """Current wall-clock time as ISO 8601 UTC."""
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()

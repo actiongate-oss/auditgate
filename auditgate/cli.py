@@ -19,11 +19,12 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 from .core import compute_hash
 
 
-def _verify_log(entries: list[dict], verbose: bool = False) -> tuple[bool, list[str]]:
+def _verify_log(entries: list[dict[str, Any]], verbose: bool = False) -> tuple[bool, list[str]]:
     """Verify a list of serialized audit entries.
 
     Works with raw dicts from JSON (no AuditEntry objects needed).
@@ -35,7 +36,7 @@ def _verify_log(entries: list[dict], verbose: bool = False) -> tuple[bool, list[
         return True, ["Empty log — nothing to verify."]
 
     # Group by trail
-    trails: dict[str, list[dict]] = {}
+    trails: dict[str, list[dict[str, Any]]] = {}
     for entry in entries:
         trail = entry.get("trail", "<unknown>")
         trails.setdefault(trail, []).append(entry)
@@ -78,8 +79,10 @@ def _verify_log(entries: list[dict], verbose: bool = False) -> tuple[bool, list[
                 prev_entry_hash = prev_entry.get("entry_hash")
                 if prev_entry_hash != prev_hash:
                     all_valid = False
+                    prev_seq = prev_entry.get('sequence', '?')
                     messages.append(
-                        f"  [{seq}] FAIL — chain break (prev_hash does not match entry [{prev_entry.get('sequence', '?')}])"
+                        f"  [{seq}] FAIL — chain break"
+                        f" (prev_hash does not match entry [{prev_seq}])"
                     )
                     if verbose:
                         messages.append(f"         expected prev: {prev_entry_hash}")
@@ -99,7 +102,7 @@ def _verify_log(entries: list[dict], verbose: bool = False) -> tuple[bool, list[
                 messages.append(f"  [{seq}] OK — {verdict} hash:{entry_hash[:12]}...")
 
         if all_valid:
-            messages.append(f"  VALID — all hashes verified")
+            messages.append("  VALID — all hashes verified")
 
     return all_valid, messages
 
@@ -145,7 +148,7 @@ def _cmd_verify(args: argparse.Namespace) -> int:
         if valid:
             print(f"RESULT: VALID ({len(entries)} entries verified)")
         else:
-            print(f"RESULT: INVALID (chain integrity broken)")
+            print("RESULT: INVALID (chain integrity broken)")
 
     return 0 if valid else 1
 

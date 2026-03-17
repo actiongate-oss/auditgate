@@ -25,7 +25,7 @@ from .core import (
 )
 from .emitter import Emitter
 from .engine import AuditError, Engine
-from .store import MemoryStore, QueryFilter, Store
+from .store import AsyncMemoryStore, AsyncStore, MemoryStore, QueryFilter, Store
 
 __all__ = [
     "Trail",
@@ -47,8 +47,10 @@ __all__ = [
     "AuditError",
     "Emitter",
     "Store",
+    "AsyncStore",
     "MemoryStore",
+    "AsyncMemoryStore",
     "QueryFilter",
 ]
 
-__version__ = "0.1.1"
+__version__ = "0.3.0"
